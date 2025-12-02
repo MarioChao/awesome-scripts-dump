@@ -1,0 +1,11 @@
+{
+  "name": "awesome-scripts-dump",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$path": "src/ReplicatedStorage",
+      "$ignoreUnknownInstances": true
+    }
+  }
+}
