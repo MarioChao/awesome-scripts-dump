@@ -7,6 +7,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 
 ---------- Constants ----------
@@ -14,6 +15,17 @@ local RunService = game:GetService("RunService")
 local Constants = {}
 Constants.localPlayer = Players.LocalPlayer
 Constants.camera = workspace.CurrentCamera :: Camera
+
+Constants.smoothTime = 0.3
+Constants.maxCameraOffsetXZMagnitude = 2
+Constants.maxCameraOffsetYMagnitude = 2
+
+Constants.testPart = Instance.new("Part")
+Constants.testPart.Shape = Enum.PartType.Ball
+Constants.testPart.Transparency = 1
+Constants.testPart.CanCollide = false
+Constants.testPart.Anchored = true
+Constants.testPart.Parent = workspace
 
 table.freeze(Constants)
 
@@ -23,7 +35,9 @@ table.freeze(Constants)
 local Globals = {}
 
 Globals.lastSubjectPosition = nil :: Vector3?
-Globals.lastAlpha = 0 :: number?
+Globals.smoothDampVelocity = Vector3.zero
+Globals.lastMaxCameraOffsetXZMagnitude = nil :: number?
+Globals.lastMaxCameraOffsetYMagnitude = nil :: number?
 
 
 ---------- Local functions ----------
@@ -84,33 +98,57 @@ getCameraSubjectInfo = function(camera: Camera)
 	return result
 end
 
-setCameraCFrame = function()
+setCameraCFrame = function(delta: number)
 	local cameraSubjectInfo = getCameraSubjectInfo(Constants.camera)
 	local humanoid = cameraSubjectInfo.humanoid
 	local subjectCFrame = cameraSubjectInfo.subjectCFrame
 	if humanoid and subjectCFrame then
-		-- Lerp alpha
-		local targetAlpha = math.clamp(math.map(humanoid.WalkSpeed, 16, 32, 1.0, 0.3), 0.3, 1.0)
-		local lastAlpha = Globals.lastAlpha or targetAlpha
-		local lerpedAlpha = math.lerp(lastAlpha, targetAlpha, 0.1)
-		Globals.lastAlpha = lerpedAlpha
-
-		-- Lerp subject position
+		-- Smooth damp subject position
+		local subjectPosition = subjectCFrame.Position
 		local lastSubjectPosition = Globals.lastSubjectPosition or subjectCFrame.Position
-		local lerpedSubjectPosition
-		if lerpedAlpha < 0.99 then
-			lerpedSubjectPosition = lastSubjectPosition:Lerp(subjectCFrame.Position, lerpedAlpha)
-		else
-			lerpedSubjectPosition = subjectCFrame.Position
-		end
-		Globals.lastSubjectPosition = lerpedSubjectPosition
+		local smoothDampedSubjectPosition: Vector3
+		smoothDampedSubjectPosition, Globals.smoothDampVelocity = TweenService:SmoothDamp(
+			lastSubjectPosition, subjectPosition, Globals.smoothDampVelocity, Constants.smoothTime,
+			nil, delta
+		)
+
+		-- Get clamped magnitude for camera offset
+		local alpha = math.map(humanoid.WalkSpeed, 16, 32, 0, 1)
+		alpha = math.clamp(alpha, 0, 1)
+		local targetCameraOffsetXZMagnitude = math.lerp(0, Constants.maxCameraOffsetXZMagnitude, alpha)
+		local targetCameraOffsetYMagnitude = math.lerp(0, Constants.maxCameraOffsetYMagnitude, alpha)
+		targetCameraOffsetXZMagnitude = math.clamp(targetCameraOffsetXZMagnitude, 0, Constants.maxCameraOffsetXZMagnitude)
+		targetCameraOffsetYMagnitude = math.clamp(targetCameraOffsetYMagnitude, 0, Constants.maxCameraOffsetYMagnitude)
+		local lastMaxCameraOffsetXZMagnitude = Globals.lastMaxCameraOffsetXZMagnitude or targetCameraOffsetXZMagnitude
+		local lastMaxCameraOffsetYMagnitude = Globals.lastMaxCameraOffsetYMagnitude or targetCameraOffsetYMagnitude
+		local maxCameraOffsetXZMagnitude = math.lerp(lastMaxCameraOffsetXZMagnitude, targetCameraOffsetXZMagnitude, 0.1)
+		local maxCameraOffsetYMagnitude = math.lerp(lastMaxCameraOffsetYMagnitude, targetCameraOffsetYMagnitude, 0.1)
+		Globals.lastMaxCameraOffsetXZMagnitude = maxCameraOffsetXZMagnitude
+		Globals.lastMaxCameraOffsetYMagnitude = maxCameraOffsetYMagnitude
+
+		-- Clamp subject position
+		local smoothDampedOffset = smoothDampedSubjectPosition - subjectPosition
+		local clampedSubjectOffsetXZ = Vector3.new(smoothDampedOffset.X, 0, smoothDampedOffset.Z)
+		local clampedSubjectOffsetY = Vector3.new(0, smoothDampedOffset.Y, 0)
+		local clampScaleFactorXZ = if clampedSubjectOffsetXZ.Magnitude == 0 then 0 else (math.min(clampedSubjectOffsetXZ.Magnitude, maxCameraOffsetXZMagnitude) / clampedSubjectOffsetXZ.Magnitude)
+		local clampScaleFactorY = if clampedSubjectOffsetY.Magnitude == 0 then 0 else (math.min(clampedSubjectOffsetY.Magnitude, maxCameraOffsetYMagnitude) / clampedSubjectOffsetY.Magnitude)
+		clampedSubjectOffsetXZ *= clampScaleFactorXZ
+		clampedSubjectOffsetY *= clampScaleFactorY
+		local clampedSubjectOffset = Vector3.new(clampedSubjectOffsetXZ.X, clampedSubjectOffsetY.Y, clampedSubjectOffsetXZ.Z)
+		local clampedSubjectPosition = subjectPosition + clampedSubjectOffset
+
+		-- Final adjusted subject position
+		local adjustedSubjectPosition = clampedSubjectPosition
+
+		Globals.lastSubjectPosition = adjustedSubjectPosition
+		Constants.testPart.Position = adjustedSubjectPosition
 
 		-- Set camera CFrame
 		if not isFirstPerson() then
 			local originalCameraCFrame = Constants.camera.CFrame
-			local lerpedSubjectCFrame = subjectCFrame.Rotation + lerpedSubjectPosition
+			local adjustedSubjectCFrame = subjectCFrame.Rotation + adjustedSubjectPosition
 			local cameraOffsetCFrame = subjectCFrame:ToObjectSpace(originalCameraCFrame)
-			Constants.camera.CFrame = lerpedSubjectCFrame:ToWorldSpace(cameraOffsetCFrame)
+			Constants.camera.CFrame = adjustedSubjectCFrame:ToWorldSpace(cameraOffsetCFrame)
 		end
 	end
 end
@@ -119,7 +157,7 @@ end
 ----- Main -----
 
 local function main()
-	RunService:BindToRenderStep("Set Camera CFrame Before", Enum.RenderPriority.Camera.Value + 5, setCameraCFrame)
+	RunService:BindToRenderStep("Set Smooth Camera CFrame", Enum.RenderPriority.Camera.Value + 5, setCameraCFrame)
 	Constants.camera.CameraType = Enum.CameraType.Scriptable
 end
 
