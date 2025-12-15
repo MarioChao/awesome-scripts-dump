@@ -1,5 +1,14 @@
 {
     "properties": {
         "RunContext": "Client"
+    },
+    "attributes": {
+        "AnimateUIGradient": true,
+        "DisableCharacterCollisions": true,
+        "DisableEmotes": true,
+        "FirstPersonTransparency": true,
+        "MouseLock": true,
+        "PlayerVFXEnabler": true,
+        "SmoothCamera": true
     }
 }
