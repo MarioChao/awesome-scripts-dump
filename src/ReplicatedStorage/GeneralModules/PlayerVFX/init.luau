@@ -9,6 +9,7 @@ local Constants = {}
 Constants.prefix = "PlayerVFX_"
 
 Constants.default = {
+    torsoTrail = script:WaitForChild("PlayerVFX_TorsoTrail"),
     landing_indicatorPart = script:WaitForChild("PlayerVFX_LandingIndicator"),
 }
 Constants.default.landing_indicatorPart.Parent = nil
@@ -21,16 +22,6 @@ Constants.instance_name = {
     landing_indicatorPart = Constants.prefix .. "Landing_IndicatorPart"
 }
 table.freeze(Constants.instance_name)
-
-Constants.trailLifetime = 0.3
-Constants.trailWidthScale = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(1, 0.2),
-})
-Constants.trailTransparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0.2),
-    NumberSequenceKeypoint.new(1, 1),
-})
 
 table.freeze(Constants)
 
@@ -106,7 +97,7 @@ setTorsoTrailVisible = function(character: Model, isVisible: boolean)
                 if child and child:IsA("Trail") then
                     result = child
                 else
-                    result = Instance.new("Trail")
+                    result = Constants.default.torsoTrail:Clone()
                     result.Name = trailName
                     result.Parent = torso
                 end
@@ -118,10 +109,6 @@ setTorsoTrailVisible = function(character: Model, isVisible: boolean)
             attachment1.Position = Vector3.new(0.5, 0, 0)
             trail.Attachment0 = attachment0
             trail.Attachment1 = attachment1
-            trail.FaceCamera = true
-            trail.WidthScale = Constants.trailWidthScale
-            trail.Transparency = Constants.trailTransparency
-            trail.Lifetime = Constants.trailLifetime
             trail.Enabled = isVisible
         end
     end
