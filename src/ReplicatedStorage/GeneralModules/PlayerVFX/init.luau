@@ -6,7 +6,7 @@
 ---------- Constants ----------
 
 local Constants = {}
-Constants.prefix = "PlayerVFX_"
+Constants.prefix = "_PlayerVFX_"
 
 Constants.default = {
     torsoTrail = script:WaitForChild("PlayerVFX_TorsoTrail"),
@@ -141,7 +141,18 @@ setLandingIndicatorVisible = function(character: Model, isVisible: boolean, coll
     end)
 
     local indicatorPart = Globals.character_landingIndicatorPart[character] or (function()
-        local result = Constants.default.landing_indicatorPart:Clone()
+        local previousResult
+        local result
+
+        -- Clean up existing indicators
+        previousResult = workspace:FindFirstChild(Constants.instance_name.landing_indicatorPart)
+        while previousResult do
+            previousResult:Destroy()
+            previousResult = workspace:FindFirstChild(Constants.instance_name.landing_indicatorPart)
+        end
+
+        -- Create new indicator
+        result = Constants.default.landing_indicatorPart:Clone()
         result.Name = Constants.instance_name.landing_indicatorPart
         result.Parent = workspace
         return result
