@@ -27,12 +27,22 @@ Constants.attributePrefix = "UIUtil_"
 table.freeze(Constants)
 
 
+---------- Globals ----------
+
+local Globals = {}
+
+Globals.instance_tween = {} :: {[Instance]: Tween}
+Globals.tween_valid = {} :: {[Tween]: boolean}
+
+
 ---------- Local functions ----------
 
 local getAttributeName
 local getDescendantsWithContainer
 local canTweenProperty
 local storeTransparencyValues
+local getTargetTransparencyPropertyTable
+local isTargetTransparencyDifferent
 local getTransparencyTweenObject
 
 local fade
@@ -70,11 +80,10 @@ storeTransparencyValues = function(object: Instance)
     end
 end
 
-getTransparencyTweenObject = function(object: Instance, tweenInfo: TweenInfo, fadeIn: boolean): Tween?
+getTargetTransparencyPropertyTable = function(object: Instance, fadeIn: boolean)
     local propertyTable = {}
     local attributeName
     local targetTransparency
-    local result
     for _, property in Constants.transparencyPropertyNames do
         if canTweenProperty(object, property) then
             targetTransparency = 1
@@ -85,6 +94,24 @@ getTransparencyTweenObject = function(object: Instance, tweenInfo: TweenInfo, fa
             propertyTable[property] = targetTransparency
         end
     end
+    return propertyTable
+end
+
+isTargetTransparencyDifferent = function(object: Instance, fadeIn: boolean)
+    local propertyTable = getTargetTransparencyPropertyTable(object, fadeIn)
+    local result = false
+    for property, value in propertyTable do
+        if InstanceProperty.getProperty(object, property) ~= value then
+            result = true
+            break
+        end
+    end
+    return result
+end
+
+getTransparencyTweenObject = function(object: Instance, tweenInfo: TweenInfo, fadeIn: boolean): Tween?
+    local propertyTable = getTargetTransparencyPropertyTable(object, fadeIn)
+    local result
     if next(propertyTable) then
         result = TweenService:Create(object, tweenInfo, propertyTable)
     end
@@ -96,22 +123,56 @@ end
 
 -- Fade the transparency of all guis in a container
 fade = function(container: Instance, tweenInfo: TweenInfo, fadeIn: boolean, waitForTween: boolean)
-    local tweenObjects = {}
+    local tweenObjects = {} :: {{
+        object: Instance,
+        tween: Tween,
+    }}
     local createdTween
     for _, object in getDescendantsWithContainer(container) do
+        -- Clean up previous tween
+        if Globals.instance_tween[object] then
+            local tween = Globals.instance_tween[object]
+            Globals.tween_valid[tween] = nil
+            Globals.instance_tween[object] = nil
+            tween:Cancel()
+            tween:Destroy()
+        end
+
+        -- Create tween only if necessary
         storeTransparencyValues(object)
-        createdTween = getTransparencyTweenObject(object, tweenInfo, fadeIn)
-        if createdTween then
-            table.insert(tweenObjects, createdTween)
+        if isTargetTransparencyDifferent(object, fadeIn) then
+            createdTween = getTransparencyTweenObject(object, tweenInfo, fadeIn)
+            if createdTween then
+                table.insert(tweenObjects, {
+                    object = object,
+                    tween = createdTween,
+                })
+                Globals.instance_tween[object] = createdTween
+                Globals.tween_valid[createdTween] = true
+            end
         end
     end
-    for _, tween in tweenObjects do
+    for _, tweenObjectInfo in tweenObjects do
         task.defer(function()
-            tween:Play()
+            local object = tweenObjectInfo.object
+            local tween = tweenObjectInfo.tween
+
+            -- Play tween if valid
+            if Globals.tween_valid[tween] then
+                tween:Play()
+                Globals.tween_valid[tween] = nil
+
+                -- Clean up dictionary
+                tween.Completed:Once(function()
+                    if Globals.instance_tween[object] == tween then
+                        Globals.instance_tween[object] = nil
+                    end
+                end)
+            end
         end)
     end
     if waitForTween and next(tweenObjects) ~= nil then
-        tweenObjects[1].Completed:Wait()
+        tweenObjects[1].tween.Completed:Wait()
     end
 end
 
