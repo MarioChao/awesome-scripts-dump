@@ -118,27 +118,28 @@ end
 ----- Landing indicator -----
 
 setLandingIndicatorVisible = function(character: Model, isVisible: boolean, collisionGroup: string)
-    local function cleanUp(destroying: boolean)
+    local function cleanUp()
         if Globals.character_landingIndicatorCleanupConnection[character] then
             Globals.character_landingIndicatorCleanupConnection[character]:Disconnect()
             Globals.character_landingIndicatorCleanupConnection[character] = nil
         end
-        if destroying then
-            if Globals.character_landingIndicatorThread[character] then
-                task.cancel(Globals.character_landingIndicatorThread[character])
-                Globals.character_landingIndicatorThread[character] = nil
-            end
-            if Globals.character_landingIndicatorPart[character] then
-                Globals.character_landingIndicatorPart[character]:Destroy()
-                Globals.character_landingIndicatorPart[character] = nil
-            end
+        if Globals.character_landingIndicatorThread[character] then
+            task.cancel(Globals.character_landingIndicatorThread[character])
+            Globals.character_landingIndicatorThread[character] = nil
+        end
+        if Globals.character_landingIndicatorPart[character] then
+            Globals.character_landingIndicatorPart[character]:Destroy()
+            Globals.character_landingIndicatorPart[character] = nil
         end
     end
-    cleanUp(false)
 
-    Globals.character_landingIndicatorCleanupConnection[character] = character.Destroying:Once(function()
-        cleanUp(true)
-    end)
+    if not Globals.character_landingIndicatorCleanupConnection[character] then
+        Globals.character_landingIndicatorCleanupConnection[character] = character.AncestryChanged:Connect(function(child: Instance, parent: Instance?)
+            if child == character and parent == nil then
+                cleanUp()
+            end
+        end)
+    end
 
     local indicatorPart = Globals.character_landingIndicatorPart[character] or (function()
         local previousResult
@@ -179,6 +180,7 @@ setLandingIndicatorVisible = function(character: Model, isVisible: boolean, coll
             if collisionGroup then
                 raycastParams.CollisionGroup = collisionGroup
             end
+            raycastParams.RespectCanCollide = true
             raycastParams.FilterDescendantsInstances = {character}
             raycastParams.FilterType = Enum.RaycastFilterType.Exclude
             while true do
