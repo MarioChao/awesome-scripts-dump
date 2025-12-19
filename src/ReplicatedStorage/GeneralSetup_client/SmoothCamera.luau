@@ -24,6 +24,8 @@ Constants.testPart = Instance.new("Part")
 Constants.testPart.Shape = Enum.PartType.Ball
 Constants.testPart.Transparency = 1
 Constants.testPart.CanCollide = false
+Constants.testPart.CanQuery = false
+Constants.testPart.CanTouch = false
 Constants.testPart.Anchored = true
 Constants.testPart.Parent = workspace
 
