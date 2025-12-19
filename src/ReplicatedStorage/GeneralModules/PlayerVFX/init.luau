@@ -167,6 +167,7 @@ setLandingIndicatorVisible = function(character: Model, isVisible: boolean, coll
 
     if not Globals.character_landingIndicatorThread[character] then
         Globals.character_landingIndicatorThread[character] = task.defer(function()
+            local humanoid
             local humanoidRootPart
             local raycastOrigin
             local raycastRadius = math.min(indicatorPart.Size.X, indicatorPart.Size.Z) / 2
@@ -181,8 +182,11 @@ setLandingIndicatorVisible = function(character: Model, isVisible: boolean, coll
             raycastParams.FilterDescendantsInstances = {character}
             raycastParams.FilterType = Enum.RaycastFilterType.Exclude
             while true do
+                humanoid = character:FindFirstChildWhichIsA("Humanoid")
                 humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-                if humanoidRootPart and humanoidRootPart:IsA("BasePart") then
+                if humanoid and humanoid.Health <= 0 then
+                    indicatorSurfaceGui.Enabled = false
+                elseif humanoidRootPart and humanoidRootPart:IsA("BasePart") then
                     raycastOrigin = humanoidRootPart.Position
                     raycastResult = workspace:Spherecast(raycastOrigin, raycastRadius, raycastDirection, raycastParams)
                     if raycastResult and raycastResult.Distance > 1 then
