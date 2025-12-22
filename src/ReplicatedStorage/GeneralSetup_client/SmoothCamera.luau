@@ -160,7 +160,6 @@ end
 
 local function main()
 	RunService:BindToRenderStep("Set Smooth Camera CFrame", Enum.RenderPriority.Camera.Value + 5, setCameraCFrame)
-	Constants.camera.CameraType = Enum.CameraType.Scriptable
 end
 
 
