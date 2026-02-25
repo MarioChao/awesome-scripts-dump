@@ -4,8 +4,25 @@
     "$className": "DataModel",
 
     "ReplicatedStorage": {
-      "$path": "src/ReplicatedStorage",
-      "$ignoreUnknownInstances": true
+      "GeneralModules": {
+        "$path": "src/ReplicatedStorage/GeneralModules",
+        "$ignoreUnknownInstances": true
+      },
+      "GeneralSetup": {
+        "$className": "Folder",
+        "MainClient": {
+          "$path": "src/ReplicatedStorage/GeneralSetup/MainClient",
+          "$ignoreUnknownInstances": true
+        },
+        "MainServer": {
+          "$path": "src/ReplicatedStorage/GeneralSetup/MainServer",
+          "$ignoreUnknownInstances": true
+        },
+        "ScriptAttributes": {
+          "$path": "src/ReplicatedStorage/GeneralSetup/ScriptAttributes",
+          "$ignoreUnknownInstances": true
+        }
+      }
     }
   }
 }

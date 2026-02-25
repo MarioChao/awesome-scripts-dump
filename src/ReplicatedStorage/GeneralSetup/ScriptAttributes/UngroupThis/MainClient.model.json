@@ -1,7 +1,5 @@
 {
-    "properties": {
-        "RunContext": "Client"
-    },
+    "className": "Configuration",
     "attributes": {
         "AnimateUIGradient": true,
         "DisableCharacterCollisions": true,

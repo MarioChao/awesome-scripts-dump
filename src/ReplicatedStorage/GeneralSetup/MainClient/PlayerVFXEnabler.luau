@@ -10,7 +10,7 @@ local Players = game:GetService("Players")
 
 ---------- Imports ----------
 
-local _GeneralModules = script.Parent.Parent:WaitForChild("GeneralModules")
+local _GeneralModules = script.Parent.Parent.Parent:WaitForChild("GeneralModules")
 local PlayerVFX = require(_GeneralModules:WaitForChild("PlayerVFX"))
 
 

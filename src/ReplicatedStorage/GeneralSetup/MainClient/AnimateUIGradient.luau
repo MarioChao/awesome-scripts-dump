@@ -40,7 +40,7 @@ getColorSequenceColor = function(colorSequenceKeypoints, alpha: number): Color3
 	local segmentAlpha
 	local result
 
-	-- Binary search for keypoint
+	-- Binary search for left keypoint
 	local bsearch = {
 		left = 1,
 		right = #keypoints - 1,
@@ -67,26 +67,28 @@ getColorSequenceColor = function(colorSequenceKeypoints, alpha: number): Color3
 	return result
 end
 
-getShiftedColorSequence = function(colorSequence: ColorSequence, shiftTime: number)
-	shiftTime = shiftTime % 2
+getShiftedColorSequence = function(colorSequence: ColorSequence, shiftAlpha: number)
+	shiftAlpha = shiftAlpha % 2
 
+	-- Create mirrored keypoints at the end
 	local initialKeypoints = colorSequence.Keypoints
 	for _, keypoint in colorSequence.Keypoints do
 		table.insert(initialKeypoints, ColorSequenceKeypoint.new(2 - keypoint.Time, keypoint.Value))
 	end
 	table.sort(initialKeypoints, function(a, b) return a.Time < b.Time end)
 
+	-- Find shifted sequence keypoints (extract shiftAlpha to shiftAlpha + 1)
 	local keypoints = {}
 	local newKeypoint
 	local newColorSequence
 	
 	-- Endpoint keypoints
-	table.insert(keypoints, ColorSequenceKeypoint.new(0, getColorSequenceColor(initialKeypoints, shiftTime)))
-	table.insert(keypoints, ColorSequenceKeypoint.new(1, getColorSequenceColor(initialKeypoints, (shiftTime + 1) % 2)))
+	table.insert(keypoints, ColorSequenceKeypoint.new(0, getColorSequenceColor(initialKeypoints, shiftAlpha)))
+	table.insert(keypoints, ColorSequenceKeypoint.new(1, getColorSequenceColor(initialKeypoints, (shiftAlpha + 1) % 2)))
 	
 	-- Intermediate keypoints
 	for _, keypoint in initialKeypoints do
-		local keypointTime = (keypoint.Time + shiftTime) % 2
+		local keypointTime = (keypoint.Time - shiftAlpha) % 2
 		if keypointTime < 1 then
 			newKeypoint = ColorSequenceKeypoint.new(keypointTime, keypoint.Value)
 			table.insert(keypoints, newKeypoint)
@@ -100,16 +102,25 @@ end
 
 gradient = function(uiGradient: UIGradient)
 	local initialColorSequence = uiGradient.Color
-	local startTime = time()
-	local speed = tonumber(uiGradient:GetAttribute("Speed")) or 1.0
-	local currentTime
-	local shiftTime
+	local speed
+	local actualTime = time()
+	local previousTime
+	local deltaTime
+	local shiftAlpha = 0
 	local currentColorSequence
 	return task.defer(function()
 		while true do
-			currentTime = time() - startTime
-			shiftTime = currentTime * speed
-			currentColorSequence = getShiftedColorSequence(initialColorSequence, shiftTime)
+			-- Refresh speed
+			speed = tonumber(uiGradient:GetAttribute("Speed")) or 1.0
+
+			-- Update time info
+			previousTime = actualTime
+			actualTime = time()
+			deltaTime = actualTime - previousTime
+			shiftAlpha += deltaTime * speed
+
+			-- Update gradient
+			currentColorSequence = getShiftedColorSequence(initialColorSequence, shiftAlpha)
 			uiGradient.Color = currentColorSequence
 			task.wait()
 		end
