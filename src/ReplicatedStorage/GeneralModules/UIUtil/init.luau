@@ -1,5 +1,7 @@
 --!strict
 
+-- UI Util
+
 
 ---------- Services ----------
 
@@ -119,9 +121,9 @@ getTransparencyTweenObject = function(object: Instance, tweenInfo: TweenInfo, fa
 end
 
 
------ Gui transparency functions -----
+----- Set transparency functions -----
 
--- Fade the transparency of all guis in a container
+--- Fades the transparency of all instances in a container
 fade = function(container: Instance, tweenInfo: TweenInfo, fadeIn: boolean, waitForTween: boolean)
     local tweenObjects = {} :: {{
         object: Instance,
@@ -176,7 +178,7 @@ fade = function(container: Instance, tweenInfo: TweenInfo, fadeIn: boolean, wait
     end
 end
 
--- Set the transparency of all guis in a container
+--- Sets the transparency of all instances in a container
 setTransparency = function(container: Instance, transparency: number)
     for _, object in getDescendantsWithContainer(container) do
         storeTransparencyValues(object)
@@ -188,7 +190,7 @@ setTransparency = function(container: Instance, transparency: number)
     end
 end
 
--- Reset the transparency of all guis in a container
+--- Resets the transparency of all instances in a container
 resetTransparency = function(container: Instance)
     local targetTransparency
     for _, object in getDescendantsWithContainer(container) do
