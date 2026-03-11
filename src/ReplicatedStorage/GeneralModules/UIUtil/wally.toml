@@ -2,7 +2,7 @@
 name = "mariochao/ui-util"
 description = "Fade tween the transparency of multiple instances."
 
-version = "0.0.0"
+version = "0.0.1"
 license = "MIT"
 authors = ["Mario Chao"]
 realm = "shared"

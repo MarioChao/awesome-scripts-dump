@@ -47,6 +47,7 @@ local getTargetTransparencyPropertyTable
 local isTargetTransparencyDifferent
 local getTransparencyTweenObject
 
+local cleanUpTween
 local fade
 local setTransparency
 local resetTransparency
@@ -123,6 +124,17 @@ end
 
 ----- Set transparency functions -----
 
+cleanUpTween = function(object: Instance)
+    -- Clean up previous tween
+    if Globals.instance_tween[object] then
+        local tween = Globals.instance_tween[object]
+        Globals.tween_valid[tween] = nil
+        Globals.instance_tween[object] = nil
+        tween:Cancel()
+        tween:Destroy()
+    end
+end
+
 --- Fades the transparency of all instances in a container
 fade = function(container: Instance, tweenInfo: TweenInfo, fadeIn: boolean, waitForTween: boolean)
     local tweenObjects = {} :: {{
@@ -131,14 +143,7 @@ fade = function(container: Instance, tweenInfo: TweenInfo, fadeIn: boolean, wait
     }}
     local createdTween
     for _, object in getDescendantsWithContainer(container) do
-        -- Clean up previous tween
-        if Globals.instance_tween[object] then
-            local tween = Globals.instance_tween[object]
-            Globals.tween_valid[tween] = nil
-            Globals.instance_tween[object] = nil
-            tween:Cancel()
-            tween:Destroy()
-        end
+        cleanUpTween(object)
 
         -- Create tween only if necessary
         storeTransparencyValues(object)
@@ -181,6 +186,7 @@ end
 --- Sets the transparency of all instances in a container
 setTransparency = function(container: Instance, transparency: number)
     for _, object in getDescendantsWithContainer(container) do
+        cleanUpTween(object)
         storeTransparencyValues(object)
         for _, property in Constants.transparencyPropertyNames do
             if canTweenProperty(object, property) then
@@ -194,6 +200,7 @@ end
 resetTransparency = function(container: Instance)
     local targetTransparency
     for _, object in getDescendantsWithContainer(container) do
+        cleanUpTween(object)
         storeTransparencyValues(object)
         for _, property in Constants.transparencyPropertyNames do
             if canTweenProperty(object, property) then
